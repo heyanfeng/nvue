@@ -1,0 +1,6 @@
+{
+  "posts": [
+    { "id": 1, "title": "模拟数据1", "author": "xxx" },
+    { "id": 2, "title": "模拟数据2", "author": "xxx" }
+  ]
+}

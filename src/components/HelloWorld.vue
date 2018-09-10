@@ -1,38 +1,74 @@
 <template>
   <div class="hello">
     <h1>{{ msg }}</h1>
-    <p>
-      For guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
+    <button @click="playMusic">点击播放音乐</button>
     <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
+      <li v-for="(item, index) in mockData" :key="index">{{item.title}}</li>
     </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
+    <canvas width="1000px" height="300px" id="canvas"></canvas>
   </div>
 </template>
 
 <script>
+import { getAudio } from '../services/demoService'
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+const source = audioCtx.createBufferSource()
+const analyser = audioCtx.createAnalyser()
+const size = 64
+analyser.fftsize = size * 2
+analyser.connect(audioCtx.destination)
+
 export default {
   name: 'HelloWorld',
+  data() {
+    return {
+      mockData: {},
+      ctx: null,
+      canvas: null
+    }
+  },
+  mounted() {
+    this.canvas = document.getElementById('canvas')
+    this.ctx = this.canvas.getContext('2d')
+    const line = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height)
+    line.addColorStop(0, 'red')
+    line.addColorStop(0.5, 'yellow')
+    line.addColorStop(1, 'green')
+    this.ctx.fillStyle = line
+    this.getData()
+  },
+  methods: {
+    getData() {
+      getAudio('02.mp3').then(res => {
+        audioCtx.decodeAudioData(res.data).then(buffer => {
+          source.buffer = buffer
+          source.connect(analyser)
+        })
+      })
+    },
+    playMusic() {
+      source.start()
+      this.musicAnalyser()
+    },
+    musicAnalyser() {
+      const arr = new Uint8Array(analyser.frequencyBinCount)
+      const v = () => {
+        analyser.getByteFrequencyData(arr)
+        this.draw(arr)
+        requestAnimationFrame(v)
+      }
+      requestAnimationFrame(v)
+    },
+    draw(arr) {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+      const w = this.canvas.width / size
+      for (let i = 0; i < size; i++) {
+        const h = arr[i]
+        this.ctx.fillRect(w * i, this.canvas.height - h, w * 0.8, h)
+      }
+    }
+  },
   props: {
     msg: String
   }
